@@ -258,6 +258,6 @@ MIT License — see [LICENSE](LICENSE) for details.
 ---
 
 <div align="center">
-  <strong>Built for the Smart City AI Hackathon 2026</strong><br>
+  <strong>Built for the Smart City</strong><br>
   <em>Bayesian Neural-Symbolic AI • Real-World Melbourne Data • MLOps-Grade Trustworthiness</em>
 </div>
