@@ -1,0 +1,7 @@
+# Ignore log files
+*.log
+
+# Ignore environment variables
+.env
+# Ignore json
+results.json
