@@ -5,6 +5,7 @@
 .env
 # Ignore json
 results.json
+static/predictions.json
 
 # Ignore datasets
 On-street_Car_Parking_Sensor_Data_-_2017.csv
