@@ -6,39 +6,52 @@ from sklearn.utils.class_weight import compute_class_weight
 from config import SEED, N_SYNTHETIC, TARGET_PER_CLASS, CFG, is_holiday
 import gc
 
+import os
+import pandas as pd
+
 def make_data(N=N_SYNTHETIC, seed=SEED):
     """
-    Generate synthetic data for BNS fallback.
-    Matches the NeurIPS notebook fallback generation logic but optimized for memory.
+    Load real processed data from CSV, and bootstrap it to match N_SYNTHETIC
+    size with slight noise to continuous features to prevent overfitting.
     """
+    cache_path = "/home/john/Dev-days/parksense/processed_data_2017.csv"
+    if not os.path.exists(cache_path):
+        raise FileNotFoundError(f"Missing {cache_path}. Run process_csv.py first.")
+        
+    df = pd.read_csv(cache_path)
+    
+    # Bootstrap to N
+    df_sample = df.sample(n=N, replace=True, random_state=seed).copy()
+    
     rng = np.random.default_rng(seed)
-    hour    = rng.integers(0, 24, N)
-    day     = rng.integers(1, 32, N)
-    month   = rng.integers(1, 13, N)
-    dow     = rng.integers(0, 7,  N)
-    weekend = (dow >= 5).astype(int)
-    hol     = np.array([is_holiday(m, d) for m, d in zip(month, day)])
-
-    air_temp  = rng.normal(17, 5, N)
-    dew_point = air_temp - rng.uniform(2, 8, N)
-    wind_spd  = rng.exponential(3, N)
-    pressure  = rng.normal(1013, 8, N)
-    rain_mm   = rng.exponential(0.3, N) * (rng.random(N) < 0.2)
-
-    # Realistic bimodal occupancy (notebook pattern)
-    occ_prob  = 0.5 + 0.3 * np.sin(2 * np.pi * (hour - 8) / 24)
-    occ_prob += 0.15 * np.sin(2 * np.pi * (hour - 17) / 24)
-    # Weekend flatter, holiday lower
-    occ_prob -= 0.05 * weekend
-    occ_prob -= 0.08 * hol
-    occ_prob  = np.clip(occ_prob + rng.normal(0, 0.1, N), 0, 1)
-    occ_class = np.digitize(occ_prob, [0.2, 0.4, 0.6, 0.8])
-
+    
+    # Add slight noise to continuous features
+    df_sample['air_temp'] += rng.normal(0, 0.5, N)
+    df_sample['dew_point'] += rng.normal(0, 0.5, N)
+    df_sample['wind_spd'] = np.clip(df_sample['wind_spd'] + rng.normal(0, 0.2, N), 0, None)
+    df_sample['pressure'] += rng.normal(0, 1.0, N)
+    df_sample['rain_mm'] = np.clip(df_sample['rain_mm'] + rng.normal(0, 0.1, N), 0, None)
+    
+    hour = df_sample['hour'].values
+    day = df_sample['day'].values
+    month = df_sample['month'].values
+    dow = df_sample['dow'].values
+    weekend = df_sample['weekend'].values
+    hol = df_sample['hol'].values
+    
+    occ_class = df_sample['occ_class'].values.astype(np.int32)
+    
+    air_temp = df_sample['air_temp'].values
+    dew_point = df_sample['dew_point'].values
+    wind_spd = df_sample['wind_spd'].values
+    pressure = df_sample['pressure'].values
+    rain_mm = df_sample['rain_mm'].values
+    
     # Free memory
-    del occ_prob
+    del df_sample, df
     gc.collect()
 
-    # Cyclic encoding (matches notebook FEATURES_CYCLIC)
+    # Cyclic encoding
     H_sin = np.sin(2*np.pi*hour/24);   H_cos = np.cos(2*np.pi*hour/24)
     D_sin = np.sin(2*np.pi*dow/7);     D_cos = np.cos(2*np.pi*dow/7)
     M_sin = np.sin(2*np.pi*month/12);  M_cos = np.cos(2*np.pi*month/12)
@@ -48,7 +61,7 @@ def make_data(N=N_SYNTHETIC, seed=SEED):
         day, weekend, air_temp, dew_point, wind_spd, pressure, rain_mm
     ]).astype(np.float32)
 
-    return X, occ_class.astype(np.int32), hour, dow, month, hol
+    return X, occ_class, hour, dow, month, hol
 
 def balance_classes(X, y, hours, dows, hols, target_per_class=TARGET_PER_CLASS, seed=SEED):
     """Downsample majority classes to balance the dataset."""
