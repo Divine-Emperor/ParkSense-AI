@@ -1,3 +1,10 @@
 fastapi
 uvicorn[standard]
 python-multipart
+tensorflow
+scikit-learn
+numpy
+pandas
+matplotlib
+seaborn
+xgboost
