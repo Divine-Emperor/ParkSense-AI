@@ -5,3 +5,7 @@
 .env
 # Ignore json
 results.json
+
+# Ignore datasets
+On-street_Car_Parking_Sensor_Data_-_2017.csv
+94866099999.csv
