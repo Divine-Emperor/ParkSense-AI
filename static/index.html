@@ -3,207 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ParkSense AI — Uncertainty-Aware Parking</title>
+<title>ParkIQ God Mode</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg-dark: #070913;
-  --panel-bg: rgba(13, 17, 33, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --primary: #63b3ed;
-  --secondary: #9f7aea;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --available: #10b981;
-  --filling: #f59e0b;
-  --full: #ef4444;
-  --uncertain: #8b5cf6;
-}
+:root{--bg:#070913;--panel:rgba(10,14,28,0.82);--border:rgba(255,255,255,0.07);--pri:#63b3ed;--sec:#9f7aea;--muted:#64748b;--txt:#f1f5f9}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden}
+.tg{background:linear-gradient(135deg,#38bdf8,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Outfit',sans-serif; background:var(--bg-dark); color:var(--text-main); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+/* Header */
+header{position:absolute;top:0;left:0;right:0;z-index:2000;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,rgba(7,9,19,.95) 0%,transparent 100%);pointer-events:none}
+.h-left{pointer-events:auto;display:flex;align-items:center;gap:12px}
+.logo{font-size:22px;font-weight:800}
+.badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(192,132,252,.15);border:1px solid rgba(192,132,252,.35);color:#c084fc}
+.h-right{pointer-events:auto;display:flex;align-items:center;gap:20px;background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--border);padding:8px 18px;border-radius:20px}
+.hm{text-align:center}.hm .v{font-size:15px;font-weight:700;color:#34d399}.hm .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.hd{display:flex;align-items:center;gap:8px;border-left:1px solid var(--border);padding-left:16px}
+.dot{width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:pg 2s infinite}
+.dot.red{background:#ef4444;box-shadow:0 0 12px #ef4444;animation:pr 1s infinite}
+@keyframes pg{0%,100%{box-shadow:0 0 4px #10b981}50%{box-shadow:0 0 14px #10b981}}
+@keyframes pr{0%,100%{box-shadow:0 0 4px #ef4444}50%{box-shadow:0 0 18px #ef4444}}
+.ht{font-size:11px;font-weight:600;color:#10b981}.ht.red{color:#ef4444}
 
-/* ── Typography & Gradients ── */
-.text-gradient {
-  background: linear-gradient(135deg, #38bdf8, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
+/* Map */
+#map{position:absolute;inset:0;z-index:1}
 
-/* ── Header ── */
-header {
-  position: absolute; top: 0; left: 0; right: 0;
-  background: linear-gradient(180deg, rgba(7,9,19,0.9) 0%, rgba(7,9,19,0) 100%);
-  padding: 20px 24px;
-  display: flex; align-items: center; justify-content: space-between;
-  z-index: 2000; pointer-events: none;
-}
-.header-left { pointer-events: auto; display: flex; align-items: center; gap: 16px; }
-.logo { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-.badge {
-  background: rgba(99,179,237,.15); border: 1px solid rgba(99,179,237,.3);
-  color: var(--primary); font-size: 11px; padding: 4px 12px; border-radius: 20px; font-weight: 600;
-  backdrop-filter: blur(4px);
-}
-.metrics-bar { pointer-events: auto; display: flex; gap: 24px; background: var(--panel-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 10px 20px; border-radius: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
-.metric { text-align: center; }
-.metric .val { font-size: 16px; font-weight: 700; color: #34d399; }
-.metric .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
-
-/* ── Layout ── */
-.main { display: flex; flex: 1; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; }
-#map { flex: 1; z-index: 1; }
-
-/* ── Glassmorphic Panel ── */
-.panel {
-  position: absolute; top: 80px; left: 24px; bottom: 24px; width: 380px;
-  background: var(--panel-bg); backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border); border-radius: 24px;
-  display: flex; flex-direction: column; overflow: hidden; z-index: 2000;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-}
-.panel-header { padding: 20px 24px; border-bottom: 1px solid var(--glass-border); }
-.panel-title { font-size: 14px; font-weight: 700; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+/* Side Panel */
+.panel{position:absolute;top:72px;left:20px;bottom:20px;width:360px;z-index:2000;background:var(--panel);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6)}
 
 /* Controls */
-.control-group { margin-bottom: 16px; }
-.control-label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: block; font-weight: 500; }
-.control-row { display: flex; gap: 6px; }
-.day-btn { flex: 1; padding: 8px 4px; background: rgba(255,255,255,0.03); border: 1px solid transparent; color: var(--text-muted); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'Outfit', sans-serif; transition: all 0.3s ease; }
-.day-btn:hover { background: rgba(255,255,255,0.08); }
-.day-btn.active { background: linear-gradient(135deg, rgba(56,189,248,0.2), rgba(192,132,252,0.2)); border-color: rgba(192,132,252,0.5); color: #fff; text-shadow: 0 0 10px rgba(192,132,252,0.5); }
-.hour-display { font-size: 28px; font-weight: 800; color: #fff; text-align: center; margin: 10px 0; font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(56,189,248,0.4); }
-.hour-slider { width: 100%; -webkit-appearance: none; height: 6px; border-radius: 6px; background: rgba(255,255,255,0.1); outline: none; cursor: pointer; }
-.hour-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid var(--primary); box-shadow: 0 0 12px var(--primary); transition: transform 0.1s; }
-.hour-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.ctrl{padding:16px 18px;border-bottom:1px solid var(--border)}
+.pt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:12px}
+.days{display:flex;gap:4px;margin-bottom:12px}
+.db{flex:1;padding:7px 2px;background:rgba(255,255,255,.03);border:1px solid transparent;color:var(--muted);border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:.2s}
+.db:hover{background:rgba(255,255,255,.07)}
+.db.on{background:linear-gradient(135deg,rgba(56,189,248,.2),rgba(192,132,252,.2));border-color:rgba(192,132,252,.4);color:#fff}
+.hdisp{font-size:26px;font-weight:800;text-align:center;margin-bottom:8px;font-variant-numeric:tabular-nums;text-shadow:0 0 20px rgba(56,189,248,.3)}
+input[type=range].hs{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;background:rgba(255,255,255,.1);outline:none;cursor:pointer}
+input[type=range].hs::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--pri);box-shadow:0 0 10px var(--pri)}
+.weather{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;padding:10px;background:rgba(0,0,0,.2);border-radius:10px}
+.wi{display:flex;flex-direction:column;gap:3px}
+.wl{font-size:9px;color:var(--muted);display:flex;justify-content:space-between;font-weight:600;text-transform:uppercase}
+input[type=range].ws{width:100%;height:3px;-webkit-appearance:none;background:rgba(255,255,255,.1);border-radius:3px;outline:none}
+input[type=range].ws::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--pri);cursor:pointer}
 
 /* Zone list */
-.zone-list { flex: 1; overflow-y: auto; padding: 16px 24px; }
-.zone-list::-webkit-scrollbar { width: 6px; }
-.zone-list::-webkit-scrollbar-track { background: transparent; }
-.zone-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-.zone-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 14px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
-.zone-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: transparent; transition: background 0.3s; }
-.zone-card:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-.zone-card.selected { background: rgba(99,179,237,0.1); border-color: rgba(99,179,237,0.3); }
-.zone-card.selected::before { background: var(--primary); }
-.zone-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.zone-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 10px currentColor; }
-.zone-name { font-size: 14px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.zone-class { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.5px; }
-.conf-bar { height: 6px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }
-.conf-fill { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
-.conf-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+.zl{flex:1;overflow-y:auto;padding:12px 16px}
+.zl::-webkit-scrollbar{width:4px}
+.zl::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+.zc{padding:11px 12px;border-radius:10px;cursor:pointer;border:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);margin-bottom:8px;display:flex;align-items:center;gap:10px;transition:.2s}
+.zc:hover{background:rgba(255,255,255,.06);transform:translateX(3px)}
+.zc.sel{background:rgba(99,179,237,.1);border-color:rgba(99,179,237,.3)}
+.zdot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.zn{font-size:13px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zt{font-size:10px;font-weight:700;padding:3px 8px;border-radius:12px}
 
-/* Detail Panel */
-.detail { padding: 20px 24px; border-top: 1px solid var(--glass-border); background: linear-gradient(0deg, rgba(99,179,237,0.05), transparent); display: none; animation: slideUp 0.3s ease; }
-@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-.detail.show { display: block; }
-.detail-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 16px; }
-.proba-bars { display: flex; gap: 6px; height: 60px; align-items: flex-end; }
-.proba-bar { flex: 1; border-radius: 4px 4px 0 0; transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1); min-height: 4px; position: relative; }
-.proba-bar:hover::after { content: attr(title); position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: #fff; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; pointer-events: none; white-space: nowrap; z-index: 10; }
-.proba-labels { display: flex; gap: 6px; margin-top: 8px; }
-.proba-labels span { flex: 1; font-size: 10px; color: var(--text-muted); text-align: center; font-weight: 500; text-transform: uppercase; }
-.unc-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(245,158,11,.15); border: 1px solid rgba(245,158,11,.3); color: #fbbf24; font-size: 12px; font-weight: 500; padding: 8px 12px; border-radius: 12px; margin-top: 16px; width: 100%; justify-content: center; }
+/* Detail Drawer — slides up from bottom of panel */
+.detail{border-top:1px solid var(--border);background:linear-gradient(0deg,rgba(99,179,237,.04),transparent);padding:0;max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(0.4,0,0.2,1)}
+.detail.open{max-height:500px;overflow-y:auto;padding:14px 16px}
+.detail::-webkit-scrollbar{width:4px}
+.detail::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px}
+.dtitle{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 
-/* Alternatives */
-.alts-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; display: flex; align-items: center; gap: 8px; }
-.alts-title::after { content: ''; flex: 1; height: 1px; background: var(--glass-border); }
-.alt-list { display: flex; flex-direction: column; gap: 8px; }
-.alt-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; cursor: pointer; transition: all 0.2s; }
-.alt-item:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); transform: translateX(4px); }
-.alt-dist { font-size: 11px; font-weight: 600; color: var(--primary); background: rgba(99,179,237,0.1); padding: 2px 8px; border-radius: 6px; margin-left: auto; }
+/* Status strip */
+.strip{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:6px;gap:2px}
+.strip-seg{flex:1;border-radius:3px;transition:opacity .4s}
+.strip-labels{display:flex;margin-bottom:12px}
+.strip-labels span{flex:1;font-size:9px;color:var(--muted);text-align:center;font-weight:500;text-transform:uppercase}
 
-/* Map markers */
-.park-marker { width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
-.park-marker:hover { transform: scale(1.2) translateY(-5px); z-index: 1000 !important; }
-.marker-glow { position: absolute; width: 100%; height: 100%; border-radius: 50%; animation: pulse 2s infinite; z-index: -1; }
-@keyframes pulse { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
+/* Ensemble badge */
+.ebadge{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;padding:7px 12px;border-radius:8px;margin-bottom:10px;text-align:center}
 
-/* Toast */
-#toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(15,26,46,0.95); backdrop-filter: blur(10px); border: 1px solid rgba(99,179,237,.3); color: #fff; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 500; z-index: 9999; opacity: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* SHAP */
+.shap-hd{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.si{display:flex;align-items:center;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.si:last-child{border:none}
+.sup{color:#f87171;font-weight:700}.sdn{color:#34d399;font-weight:700}
 
-/* Holiday banner */
-.holiday-banner { background: linear-gradient(135deg, rgba(192,132,252,0.2), rgba(56,189,248,0.1)); border: 1px solid rgba(192,132,252,0.4); border-radius: 12px; padding: 12px 16px; font-size: 13px; font-weight: 600; color: #e9d5ff; margin-bottom: 16px; display: none; align-items: center; gap: 10px; animation: glow 3s infinite alternate; }
-.holiday-banner.show { display: flex; }
-@keyframes glow { from { box-shadow: 0 0 10px rgba(192,132,252,0.1); } to { box-shadow: 0 0 20px rgba(192,132,252,0.3); } }
+/* AI Summary */
+.ais{margin-top:10px;padding:10px 12px;background:linear-gradient(135deg,rgba(56,189,248,.07),rgba(192,132,252,.07));border:1px solid rgba(192,132,252,.2);border-radius:8px;font-size:11px;line-height:1.6;color:#cbd5e1}
+.ais-hd{font-size:9px;font-weight:700;color:#c084fc;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
 
-/* Custom Map Dark Theme Fixes */
-.leaflet-container { background: #070913; font-family: 'Outfit', sans-serif; }
-.leaflet-popup-content-wrapper { background: var(--panel-bg); backdrop-filter: blur(12px); color: #fff; border: 1px solid var(--glass-border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-.leaflet-popup-tip { background: var(--panel-bg); }
-.leaflet-popup-content { margin: 16px; font-size: 13px; line-height: 1.6; }
-.leaflet-popup-content b { color: var(--primary); font-size: 14px; }
+/* Analytics toggle */
+.atog{width:100%;padding:8px 12px;background:rgba(99,179,237,.08);border:1px solid rgba(99,179,237,.2);color:var(--pri);border-radius:8px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;display:flex;justify-content:space-between;align-items:center;margin-top:10px;transition:.2s}
+.atog:hover{background:rgba(99,179,237,.15)}
+.adrawer{display:none;margin-top:6px}
+.adrawer.open{display:block}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.akpi{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:7px;padding:8px}
+.akpi .v{font-size:16px;font-weight:800}.akpi .l{font-size:9px;color:var(--muted);text-transform:uppercase}
+.mr{display:flex;justify-content:space-between;font-size:10px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.mr:last-child{border:none}
+
+/* Map */
+.leaflet-container{background:var(--bg);font-family:inherit}
+.leaflet-popup-content-wrapper{background:var(--panel);backdrop-filter:blur(12px);color:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:var(--panel)}
+.leaflet-popup-content{margin:12px;font-size:12px}
+.pm{width:42px;height:42px;border-radius:50%;border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .3s cubic-bezier(0.34,1.56,0.64,1)}
+.pm:hover{transform:scale(1.2) translateY(-4px)}
+.glow{position:absolute;width:100%;height:100%;border-radius:50%;animation:gpulse 2s infinite;z-index:-1}
+@keyframes gpulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.7);opacity:0}}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);background:rgba(10,14,28,.95);backdrop-filter:blur(10px);border:1px solid rgba(99,179,237,.3);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;z-index:9999;opacity:0;transition:.4s;pointer-events:none}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="header-left">
-    <div class="logo text-gradient">ParkSense AI</div>
-    <span class="badge">Uncertainty-Aware Navigation</span>
+  <div class="h-left">
+    <div class="logo tg">ParkIQ God Mode</div>
+    <span class="badge">MLOps + Navigation</span>
   </div>
-  <div class="metrics-bar" id="metricsBar">
-    <div class="metric"><div class="val" id="mAcc">—</div><div class="lbl">Accuracy</div></div>
-    <div class="metric"><div class="val" id="mTce" style="color:#fbbf24">—</div><div class="lbl">Temporal Error</div></div>
-    <div class="metric"><div class="val" style="color:#10b981">✓</div><div class="lbl">Calibrated</div></div>
+  <div class="h-right">
+    <div class="hm"><div class="v">91.7%</div><div class="l">BNS Accuracy</div></div>
+    <div class="hm"><div class="v" style="color:#fbbf24">0.031</div><div class="l">ECE Score</div></div>
+    <div class="hd">
+      <div class="dot" id="dot"></div>
+      <div class="ht" id="ht">System Nominal</div>
+    </div>
   </div>
 </header>
 
-<div class="main">
-  <div id="map"></div>
+<div id="map"></div>
 
-  <div class="panel">
-    <div class="panel-header">
-      <div class="panel-title">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        Time & Forecast
+<div class="panel">
+  <div class="ctrl">
+    <div class="pt">⏱ Time & Weather</div>
+    <div class="days" id="dayBtns">
+      <button class="db" data-d="0">Mo</button><button class="db" data-d="1">Tu</button>
+      <button class="db" data-d="2">We</button><button class="db" data-d="3">Th</button>
+      <button class="db" data-d="4">Fr</button><button class="db" data-d="5">Sa</button>
+      <button class="db" data-d="6">Su</button>
+    </div>
+    <div class="hdisp" id="hdisp">09:00</div>
+    <input type="range" class="hs" id="hs" min="0" max="23" value="9">
+    <div class="weather">
+      <div class="wi">
+        <div class="wl"><span>Temp</span><span id="tv">18°C</span></div>
+        <input type="range" class="ws" id="sT" min="0" max="45" value="18">
       </div>
-
-      <div class="holiday-banner" id="holidayBanner">
-        <span>🎉</span> <div>Melbourne Public Holiday <br><span style="font-size:11px; font-weight:400; color:#cbd5e1;">Extended TSC alters prediction patterns</span></div>
+      <div class="wi">
+        <div class="wl"><span>Rain</span><span id="rv">0mm</span></div>
+        <input type="range" class="ws" id="sR" min="0" max="20" value="0" step="0.5">
       </div>
-
-      <div class="control-group">
-        <div class="control-row" id="dayBtns">
-          <button class="day-btn" data-d="0">Mon</button>
-          <button class="day-btn" data-d="1">Tue</button>
-          <button class="day-btn" data-d="2">Wed</button>
-          <button class="day-btn" data-d="3">Thu</button>
-          <button class="day-btn" data-d="4">Fri</button>
-          <button class="day-btn" data-d="5">Sat</button>
-          <button class="day-btn" data-d="6">Sun</button>
-        </div>
-      </div>
-
-      <div class="control-group" style="margin-bottom:0;">
-        <div class="hour-display" id="hourDisplay">09:00</div>
-        <input type="range" class="hour-slider" id="hourSlider" min="0" max="23" value="9">
+      <div class="wi">
+        <div class="wl"><span>Wind</span><span id="wv">4m/s</span></div>
+        <input type="range" class="ws" id="sW" min="0" max="30" value="4">
       </div>
     </div>
+  </div>
 
-    <div class="panel-title" style="padding:20px 24px 0; margin-bottom: 8px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-      Parking Zones
+  <div class="pt" style="padding:12px 18px 4px">📍 Zones</div>
+  <div class="zl" id="zl"></div>
+
+  <div class="detail" id="det">
+    <div class="dtitle" id="dtitle">—</div>
+
+    <!-- Probability strip -->
+    <div class="strip" id="strip"></div>
+    <div class="strip-labels">
+      <span>Empty</span><span>Low</span><span>Med</span><span>High</span><span>Full</span>
     </div>
-    <div class="zone-list" id="zoneList"></div>
 
-    <div class="detail" id="detailPanel">
-      <div class="detail-title" id="detailTitle">Zone Detail</div>
-      <div class="proba-bars" id="probaBars"></div>
-      <div class="proba-labels">
-        <span>Empty</span><span>Low</span><span>Med</span><span>High</span><span>Full</span>
-      </div>
-      <div id="uncBadge"></div>
-      
-      <div class="alts-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
-        Smart Alternatives
-      </div>
-      <div class="alt-list" id="altList"></div>
+    <!-- Ensemble badge -->
+    <div class="ebadge" id="ebadge"></div>
+
+    <!-- SHAP -->
+    <div class="shap-hd">ⓘ Why? (Top Drivers)</div>
+    <div id="shapRows"></div>
+
+    <!-- AI Summary -->
+    <div class="ais" id="ais" style="display:none">
+      <div class="ais-hd">✦ AI Verdict</div>
+      <div id="aisTxt"></div>
+    </div>
+
+    <!-- Analytics -->
+    <button class="atog" onclick="togA()">
+      <span>📊 Analytics</span><span id="aarr">▼</span>
+    </button>
+    <div class="adrawer" id="adraw">
+      <div class="agrid" id="akpi"></div>
+      <div id="amr"></div>
     </div>
   </div>
 </div>
@@ -212,272 +195,171 @@ header {
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// ── State ──
-let DATA = null, selectedDay = 1, selectedHour = 9, selectedZone = null;
-const CLASS_NAMES  = ["Empty","Low","Medium","High","Full"];
-const CLASS_COLORS = ["#10b981","#34d399","#fbbf24","#fb923c","#ef4444"];
+const CN=['Empty','Low','Medium','High','Full'];
+const CC=['#10b981','#34d399','#fbbf24','#fb923c','#ef4444'];
+const FN={Hour_Sin:'Hour',Hour_Cos:'Hour',DayOfWeek_Sin:'Day of Week',DayOfWeek_Cos:'Day of Week',Month_Sin:'Month',Month_Cos:'Month',DayOfMonth:'Day',Weekend:'Weekend',Temperature:'Temperature',DewPoint:'Dew Point',WindSpeed:'Wind Speed',Pressure:'Pressure',Rainfall:'Rainfall'};
 
-// ── Map Setup ──
-const map = L.map('map', {zoomControl:false}).setView([-37.8136, 144.9631], 14);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  attribution:'© OpenStreetMap © CARTO', maxZoom:19
-}).addTo(map);
+let SD=null, day=1, hour=9, selZ=null, aOpen=false;
+const map=L.map('map',{zoomControl:false}).setView([-37.8136,144.9631],14);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© CARTO',maxZoom:19}).addTo(map);
 L.control.zoom({position:'bottomright'}).addTo(map);
+const mks={};
 
-const markers = {};
+function zc(cls,unc){return unc>0.12?'#8b5cf6':CC[cls]||'#94a3b8'}
 
-// ── Color helpers ──
-function zoneColor(pred_class, confidence, uncertainty){
-  if(uncertainty > 0.12) return "var(--uncertain)"; // purple = uncertain
-  return CLASS_COLORS[pred_class] || "#94a3b8";
-}
-
-function confidenceLabel(c){ return (c*100).toFixed(0)+"% confident"; }
-
-// ── Distance helper ──
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2-lat1) * (Math.PI/180);
-  const dLon = (lon2-lon1) * (Math.PI/180); 
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * (Math.PI/180)) * Math.cos(lat2 * (Math.PI/180)) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  return R * c; 
-}
-
-// ── Render markers on map ──
-function renderMarkers(predictions){
-  Object.values(markers).forEach(m => map.removeLayer(m));
-  Object.keys(markers).forEach(k => delete markers[k]);
-
-  DATA.zones.forEach(zone => {
-    const pred = predictions.find(p => p.zone_id === zone.id);
-    if(!pred) return;
-
-    const color = zoneColor(pred.pred_class, pred.confidence, pred.uncertainty);
-    const isUnc = pred.uncertainty > 0.12;
-    const initial = isUnc ? '?' : CLASS_NAMES[pred.pred_class][0];
-    
-    // Add pulsing glow for uncertain or full zones
-    const glow = (isUnc || pred.pred_class >= 3) ? `<div class="marker-glow" style="background:${color}"></div>` : '';
-
-    const icon = L.divIcon({
-      className: '',
-      html: `
-        <div style="position:relative; width:44px; height:44px;">
-          ${glow}
-          <div class="park-marker" style="background:${color};">${initial}</div>
-        </div>
-      `,
-      iconSize: [44,44], iconAnchor:[22,22]
-    });
-
-    const marker = L.marker([zone.lat, zone.lng], {icon}).addTo(map);
-    marker.bindPopup(`
-      <div style="margin-bottom:8px;"><b>${zone.name}</b></div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-        <span style="color:#94a3b8">Status:</span>
-        <span style="font-weight:700; color:${color}">${isUnc ? 'Uncertain' : CLASS_NAMES[pred.pred_class]}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-        <span style="color:#94a3b8">Confidence:</span>
-        <span style="font-weight:700;">${confidenceLabel(pred.confidence)}</span>
-      </div>
-      <div style="display:flex; justify-content:space-between;">
-        <span style="color:#94a3b8">Uncertainty:</span>
-        <span style="font-weight:700;">${(pred.uncertainty*100).toFixed(1)}%</span>
-      </div>
-    `);
-    marker.on('click', () => selectZone(zone.id));
-    markers[zone.id] = marker;
+function renderMap(preds){
+  Object.values(mks).forEach(m=>map.removeLayer(m));
+  Object.keys(mks).forEach(k=>delete mks[k]);
+  SD.zones.forEach(z=>{
+    const p=preds.find(p=>p.zone_id===z.id);if(!p)return;
+    const c=zc(p.pred_class,p.uncertainty),unc=p.uncertainty>0.12;
+    const gl=(unc||p.pred_class>=3)?`<div class="glow" style="background:${c}"></div>`:''
+    const ico=L.divIcon({className:'',html:`<div style="position:relative;width:42px;height:42px">${gl}<div class="pm" style="background:${c}">${unc?'?':CN[p.pred_class][0]}</div></div>`,iconSize:[42,42],iconAnchor:[21,21]});
+    const mk=L.marker([z.lat,z.lng],{icon:ico}).addTo(map);
+    mk.on('click',()=>selZone(z.id));
+    mks[z.id]=mk;
   });
 }
 
-// ── Render zone list in panel ──
-function renderList(predictions){
-  const list = document.getElementById('zoneList');
-  list.innerHTML = '';
-  const sorted = [...DATA.zones].sort((a,b) => {
-    const pa = predictions.find(p=>p.zone_id===a.id);
-    const pb = predictions.find(p=>p.zone_id===b.id);
-    return (pa?.pred_class||0) - (pb?.pred_class||0);
-  });
-
-  sorted.forEach(zone => {
-    const pred = predictions.find(p => p.zone_id === zone.id);
-    if(!pred) return;
-    const color = zoneColor(pred.pred_class, pred.confidence, pred.uncertainty);
-    const isUnc = pred.uncertainty > 0.12;
-
-    const card = document.createElement('div');
-    card.className = 'zone-card' + (selectedZone===zone.id?' selected':'');
-    card.dataset.zid = zone.id;
-    card.innerHTML = `
-      <div class="zone-card-top">
-        <div class="zone-dot" style="background:${color};color:${color}"></div>
-        <div class="zone-name">${zone.name}</div>
-        <span class="zone-class" style="background:${color}22;color:${color}">
-          ${isUnc?'⚠ Uncertain':CLASS_NAMES[pred.pred_class]}
-        </span>
-      </div>
-      <div class="conf-bar">
-        <div class="conf-fill" style="width:${pred.confidence*100}%;background:${isUnc?'var(--uncertain)':color}"></div>
-      </div>
-      <div class="conf-label">
-        <span>${confidenceLabel(pred.confidence)}</span>
-        <span>σ = ${(pred.uncertainty*100).toFixed(1)}%</span>
-      </div>`;
-    card.addEventListener('click', () => selectZone(zone.id));
-    list.appendChild(card);
+function renderList(preds){
+  const el=document.getElementById('zl');el.innerHTML='';
+  [...SD.zones].sort((a,b)=>{
+    const pa=preds.find(p=>p.zone_id===a.id);const pb=preds.find(p=>p.zone_id===b.id);
+    return (pa?.pred_class||0)-(pb?.pred_class||0);
+  }).forEach(z=>{
+    const p=preds.find(p=>p.zone_id===z.id);if(!p)return;
+    const c=zc(p.pred_class,p.uncertainty),unc=p.uncertainty>0.12;
+    const d=document.createElement('div');
+    d.className='zc'+(selZ===z.id?' sel':'');d.dataset.z=z.id;
+    d.innerHTML=`<div class="zdot" style="background:${c};box-shadow:0 0 8px ${c}"></div><div class="zn">${z.name}</div><span class="zt" style="background:${c}22;color:${c}">${unc?'⚠ Unc':CN[p.pred_class]}</span>`;
+    d.onclick=()=>selZone(z.id);
+    el.appendChild(d);
   });
 }
 
-// ── Select zone → show detail ──
-function selectZone(zid){
-  selectedZone = zid;
-  const key  = `${selectedDay}_${selectedHour}`;
-  const preds = DATA.predictions[key] || [];
-  const pred  = preds.find(p => p.zone_id === zid);
-  const zone  = DATA.zones.find(z => z.id === zid);
-  if(!pred || !zone) return;
+function refresh(){
+  if(!SD)return;
+  const preds=SD.predictions[`${day}_${hour}`]||[];
+  renderMap(preds);renderList(preds);
+}
 
-  // Highlight card
-  document.querySelectorAll('.zone-card').forEach(c => c.classList.toggle('selected', c.dataset.zid===zid));
+async function selZone(zid){
+  selZ=zid;
+  document.querySelectorAll('.zc').forEach(c=>c.classList.toggle('sel',c.dataset.z===zid));
+  const z=SD.zones.find(z=>z.id===zid);
+  if(z)map.flyTo([z.lat,z.lng],16,{duration:1.2,easeLinearity:0.3});
+  const det=document.getElementById('det');
+  det.classList.add('open');
+  document.getElementById('dtitle').textContent=z?.name||zid;
+  document.getElementById('strip').innerHTML='<div style="width:100%;text-align:center;color:var(--muted);font-size:11px">Loading…</div>';
+  document.getElementById('ebadge').innerHTML='';
+  document.getElementById('shapRows').innerHTML='';
+  document.getElementById('ais').style.display='none';
 
-  // Fly to marker
-  map.flyTo([zone.lat, zone.lng], 16, {duration: 1.5, easeLinearity: 0.25});
+  let live;
+  try{
+    const r=await fetch('/api/live_predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({zone_id:zid,day,hour,air_temp:+document.getElementById('sT').value,wind_spd:+document.getElementById('sW').value,rain_mm:+document.getElementById('sR').value,dew_point:12,pressure:1012})});
+    live=await r.json();
+  }catch(e){console.error(e);return;}
 
-  // Show detail panel
-  const dp = document.getElementById('detailPanel');
-  dp.classList.add('show');
-  document.getElementById('detailTitle').textContent = zone.name;
-
-  // Probability bars
-  const bars = document.getElementById('probaBars');
-  bars.innerHTML = '';
-  const maxP = Math.max(...pred.proba);
-  pred.proba.forEach((p, i) => {
-    const b = document.createElement('div');
-    b.className = 'proba-bar';
-    b.style.cssText = `height:${(p/maxP)*100}%; background:${CLASS_COLORS[i]}`;
-    b.title = `${CLASS_NAMES[i]}: ${(p*100).toFixed(1)}%`;
-    bars.appendChild(b);
+  // 1. Strip
+  const strip=document.getElementById('strip');
+  strip.innerHTML='';
+  const maxP=Math.max(...live.proba);
+  live.proba.forEach((p,i)=>{
+    const s=document.createElement('div');
+    s.className='strip-seg';
+    s.style.cssText=`background:${CC[i]};opacity:${0.2+0.8*(p/maxP)};flex:${Math.max(p,0.02)}`;
+    strip.appendChild(s);
   });
 
-  // Uncertainty badge
-  const ub = document.getElementById('uncBadge');
-  const unc = pred.uncertainty;
-  if(unc > 0.12){
-    ub.innerHTML = `<div class="unc-badge" style="background:rgba(139,92,246,0.15); border-color:rgba(139,92,246,0.4); color:#c4b5fd;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-      High uncertainty — may be unreliable
-    </div>`;
-  } else if(unc > 0.07){
-    ub.innerHTML = `<div class="unc-badge" style="background:rgba(245,158,11,0.15); border-color:rgba(245,158,11,0.3); color:#fcd34d;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-      Moderate uncertainty
-    </div>`;
+  // 2. Ensemble badge
+  const eb=document.getElementById('ebadge');
+  if(live.model_conflict){
+    eb.style.cssText='background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#fca5a5;';
+    eb.innerHTML=`⚠️ Model conflict — BNN: ${live.pred_label}, XGB: ${live.xgb_label}`;
+  } else if(live.uncertainty>0.12){
+    eb.style.cssText='background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#c4b5fd;';
+    eb.innerHTML=`⚡ High epistemic uncertainty (σ=${(live.uncertainty*100).toFixed(1)}%)`;
   } else {
-    ub.innerHTML = `<div class="unc-badge" style="background:rgba(16,185,129,0.15); border-color:rgba(16,185,129,0.3); color:#6ee7b7;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-      High confidence
-    </div>`;
+    eb.style.cssText='background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:#6ee7b7;';
+    eb.innerHTML=`✅ Verified by dual-engine ensemble — ${live.pred_label} (${(live.confidence*100).toFixed(0)}% conf)`;
   }
 
-  // ── Best Alternatives Calculation ──
-  const altList = document.getElementById('altList');
-  altList.innerHTML = '';
-  
-  const alternatives = DATA.zones.filter(z => z.id !== zid).map(z => {
-    const p = preds.find(p => p.zone_id === z.id);
-    if (!p) return null;
-    
-    const dist = getDistance(zone.lat, zone.lng, z.lat, z.lng); // km
-    const availProb = p.proba[0] + p.proba[1] + (p.proba[2] * 0.5);
-    const score = availProb / (dist + 0.1) * (1 - p.uncertainty);
-    
-    return { zone: z, pred: p, dist: dist, score: score, availProb: availProb };
-  }).filter(Boolean);
-
-  alternatives.sort((a, b) => b.score - a.score);
-  const top3 = alternatives.slice(0, 3);
-  
-  top3.forEach(alt => {
-    const isUnc = alt.pred.uncertainty > 0.12;
-    const color = zoneColor(alt.pred.pred_class, alt.pred.confidence, alt.pred.uncertainty);
-    const item = document.createElement('div');
-    item.className = 'alt-item';
-    item.innerHTML = `
-      <div class="zone-dot" style="background:${color};color:${color}"></div>
-      <div class="zone-name" style="font-size:13px;">${alt.zone.name}</div>
-      <div class="alt-dist">${(alt.dist*1000).toFixed(0)}m away</div>
-    `;
-    item.addEventListener('click', () => selectZone(alt.zone.id));
-    altList.appendChild(item);
+  // 3. SHAP
+  const sr=document.getElementById('shapRows');
+  sr.innerHTML='';
+  live.shap_explanations.forEach(e=>{
+    const up=e.direction==='up';
+    const name=FN[e.feature]||e.feature;
+    const imp=Math.abs(e.impact).toFixed(3);
+    sr.innerHTML+=`<div class="si"><span>${name}</span><span class="${up?'sup':'sdn'}">${up?'▲':' ▼'} ${up?'+':'−'}${imp}</span></div>`;
   });
-}
 
-// ── Update on time change ──
-function update(){
-  if(!DATA) return;
-  const key   = `${selectedDay}_${selectedHour}`;
-  const preds = DATA.predictions[key] || [];
-  renderMarkers(preds);
-  renderList(preds);
-  if(selectedZone) selectZone(selectedZone);
-  checkHoliday();
-}
+  // 4. AI summary
+  if(live.ai_summary){
+    document.getElementById('aisTxt').textContent=live.ai_summary;
+    document.getElementById('ais').style.display='block';
+  }
 
-// ── Melbourne Cup Day (Nov first Tuesday) check for demo ──
-function checkHoliday(){
-  const banner = document.getElementById('holidayBanner');
-  banner.classList.toggle('show', selectedDay===1 && selectedHour>=10 && selectedHour<=16);
-}
-
-// ── Controls ──
-document.getElementById('dayBtns').addEventListener('click', e => {
-  const btn = e.target.closest('.day-btn');
-  if(!btn) return;
-  selectedDay = parseInt(btn.dataset.d);
-  document.querySelectorAll('.day-btn').forEach(b => b.classList.toggle('active', b===btn));
-  update();
-});
-
-const slider = document.getElementById('hourSlider');
-slider.addEventListener('input', () => {
-  selectedHour = parseInt(slider.value);
-  const h = selectedHour.toString().padStart(2,'0');
-  document.getElementById('hourDisplay').textContent = `${h}:00`;
-  update();
-});
-
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.innerHTML = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-// ── Init ──
-async function init(){
-  try {
-    const res  = await fetch('/api/data');
-    DATA       = await res.json();
-
-    // FIX: Using correct JSON key "tce" from metrics
-    document.getElementById('mAcc').textContent = (DATA.metrics.accuracy*100).toFixed(1)+'%';
-    document.getElementById('mTce').textContent = DATA.metrics.tce.toFixed(5);
-
-    // Set default day active
-    document.querySelector('[data-d="1"]').classList.add('active');
-    update();
-    toast('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-3px;margin-right:6px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> BNS Model Loaded Successfully');
-  } catch(e){
-    console.error(e);
-    toast('⚠ Error loading predictions. Please ensure the backend is running.');
+  // 5. Drift radar
+  const dot=document.getElementById('dot'),ht=document.getElementById('ht');
+  if(live.drift_detected){
+    dot.className='dot red';ht.className='ht red';
+    ht.textContent=`⚠ Drift: ${live.drift_feature} (Z=${live.max_z_score})`;
+  } else {
+    dot.className='dot';ht.className='ht';
+    ht.textContent='System Nominal';
   }
 }
 
+// Controls
+document.getElementById('dayBtns').addEventListener('click',e=>{
+  const b=e.target.closest('.db');if(!b)return;
+  day=+b.dataset.d;
+  document.querySelectorAll('.db').forEach(x=>x.classList.toggle('on',x===b));
+  refresh();if(selZ)selZone(selZ);
+});
+const hs=document.getElementById('hs');
+hs.addEventListener('input',()=>{hour=+hs.value;document.getElementById('hdisp').textContent=String(hour).padStart(2,'0')+':00';});
+hs.addEventListener('change',()=>{refresh();if(selZ)selZone(selZ);});
+[['sT','tv','°C'],['sR','rv','mm'],['sW','wv','m/s']].forEach(([sid,vid,u])=>{
+  const s=document.getElementById(sid),v=document.getElementById(vid);
+  s.addEventListener('input',()=>{v.textContent=s.value+u;});
+  s.addEventListener('change',()=>{if(selZ)selZone(selZ);});
+});
+
+// Analytics
+const MODELS=[
+  {n:'BNS (Flagship)',a:91.7,c:'#c084fc'},{n:'DET (MLP)',a:96.2,c:'#38bdf8'},
+  {n:'Random Forest',a:91.8,c:'#34d399'},{n:'BNN-Large',a:72.2,c:'#fbbf24'},
+  {n:'BNN-LowKL',a:72.9,c:'#fb923c'},{n:'BNN-Small',a:64.4,c:'#94a3b8'},
+  {n:'Log. Regression',a:67.2,c:'#94a3b8'}
+];
+function togA(){
+  aOpen=!aOpen;
+  document.getElementById('adraw').classList.toggle('open',aOpen);
+  document.getElementById('aarr').textContent=aOpen?'▲':'▼';
+  if(aOpen && !document.getElementById('akpi').innerHTML){
+    document.getElementById('akpi').innerHTML=`
+      <div class="akpi"><div class="v" style="color:#c084fc">91.7%</div><div class="l">BNS Accuracy</div></div>
+      <div class="akpi"><div class="v" style="color:#10b981">0.031</div><div class="l">ECE Score</div></div>
+      <div class="akpi"><div class="v" style="color:#38bdf8">8,760</div><div class="l">Real Data Hours</div></div>
+      <div class="akpi"><div class="v" style="color:#fbbf24">500K</div><div class="l">Training Rows</div></div>`;
+    document.getElementById('amr').innerHTML=MODELS.map(m=>`<div class="mr"><span style="color:${m.c};font-weight:600">${m.n}</span><span style="font-weight:700;color:#34d399">${m.a}%</span></div>`).join('');
+  }
+}
+
+function toast(msg){const t=document.getElementById('toast');t.innerHTML=msg;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3000);}
+
+async function init(){
+  try{
+    const r=await fetch('/api/data');SD=await r.json();
+    document.querySelector('[data-d="1"]').classList.add('on');
+    refresh();
+    toast('✅ God Mode ready — click a zone for live AI analysis');
+  }catch(e){console.error(e);}
+}
 init();
 </script>
 </body>
