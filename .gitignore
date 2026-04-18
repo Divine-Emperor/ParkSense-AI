@@ -3,6 +3,7 @@
 
 # Ignore environment variables
 .env
+
 # Ignore json
 results.json
 static/predictions.json
@@ -10,6 +11,8 @@ static/predictions.json
 # Ignore datasets
 On-street_Car_Parking_Sensor_Data_-_2017.csv
 94866099999.csv
+processed_data_2017.csv
+
 # Ignore other non requirement files
 __pycache__
 __MACOSX
