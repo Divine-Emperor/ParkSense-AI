@@ -249,11 +249,6 @@ seaborn             # Calibration visualization
 | **ECE** | Expected Calibration Error — measures if confidence == accuracy |
 | **TCE** | Temporal Consistency Error — measures adherence to empirical hourly patterns |
 
----
-
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
